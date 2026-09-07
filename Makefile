@@ -7,7 +7,8 @@ SRC=src/sensor_swc.cpp src/controller_swc.cpp src/execution_manager.cpp src/serv
 all: ecu
 
 ecu: src/main.cpp $(SRC)
+	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -o build/ecu src/main.cpp $(SRC) $(LDFLAGS)
 
 clean:
-	rm -f build/ECU sensor_log.txt controller_log.txt
+	rm -f build/ecu sensor_log.txt controller_log.txt
