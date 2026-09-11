@@ -4,6 +4,7 @@
 #include "../include/lifecycle.hpp"
 #include <iostream>
 #include<fstream>
+#include<sstream>
 #include <thread>
 #include <chrono>
 
@@ -21,10 +22,12 @@ void sensorApp(MessageQueue<SensorData>& queue, float startTemp, float tempStep,
         queue.send(data);
 
         std::ofstream logfile("sensor_log.txt", std::ios::app);
-        std::cout<<"[Sensor] Temp = "<<data.temperature<<", Pressure = "<<data.pressure << std::endl;
+        std::ostringstream line;
+        line<<"Temp = "<<data.temperature<<", Pressure = "<<data.pressure;
+        std::cout<<("[Sensor] "+line.str()+"\n")<<std::flush;
         if(logfile.is_open()){
-            logfile<<"Temp = "<<data.temperature<<", Pressure = "<<data.pressure<<std::endl;  
-        }     
+            logfile<<line.str()<<std::endl;
+        }
         ++i;
         std::this_thread::sleep_for(std::chrono::milliseconds(periodMs));
     }

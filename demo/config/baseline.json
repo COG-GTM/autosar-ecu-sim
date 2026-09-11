@@ -5,8 +5,8 @@
     "periodMs": 1000
   },
   "controller": {
-    "warningThreshold": 25.0,
-    "pressureWarningThreshold": 3.0,
-    "periodMs": 2000
+    "warningThreshold": 60.0,
+    "pressureWarningThreshold": 10.0,
+    "periodMs": 1000
   }
 }

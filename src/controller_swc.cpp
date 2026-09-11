@@ -7,12 +7,13 @@
 #include "../include/lifecycle.hpp"
 #include <iostream>
 #include<fstream>
+#include<sstream>
 #include<thread>
 #include <chrono>
 
 extern std::atomic<AppState> controllerState;
 
-void controllerApp(float warningThreshold, int periodMs) {
+void controllerApp(float warningThreshold, float pressureThreshold, int periodMs) {
     controllerState = AppState::RUNNING;
     auto queuePtr = static_cast<MessageQueue<SensorData>*>(ServiceRegistry::instance().discoverService("SensorDataService"));
     
@@ -22,20 +23,17 @@ void controllerApp(float warningThreshold, int periodMs) {
         
         if (data.temperature != lastTemp) {
             std::ofstream logfile("controller_log.txt", std::ios::app);
-            std::cout << "[Controller] Temp = " << data.temperature << ", Pressure = " << data.pressure;
-            if (logfile.is_open()) {
-                logfile << "Temp = " << data.temperature << ", Pressure = " << data.pressure;
-            }
-
+            std::ostringstream line;
+            line << "Temp = " << data.temperature << ", Pressure = " << data.pressure;
             if (data.temperature > warningThreshold) {
-                std::cout << " [WARNING: High Temp!]";
-                if (logfile.is_open()) {
-                    logfile << " [WARNING: High Temp!]";
-                }
+                line << " [WARNING: High Temp!]";
             }
-            std::cout << std::endl;
+            if (data.pressure > pressureThreshold) {
+                line << " [WARNING: High Pressure!]";
+            }
+            std::cout << ("[Controller] " + line.str() + "\n") << std::flush;
             if (logfile.is_open()) {
-                logfile << std::endl;
+                logfile << line.str() << std::endl;
             }
         }
         lastTemp = data.temperature;
