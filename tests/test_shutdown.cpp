@@ -19,7 +19,7 @@ int main() {
     MessageQueue<SensorData> queue;
     // Sensor period (3000 ms) >> controller period (20 ms): controller starves.
     std::thread sensorThread(sensorApp, std::ref(queue), 20.0f, 1.0f, 3000);
-    std::thread controllerThread(controllerApp, 25.0f, 20);
+    std::thread controllerThread(controllerApp, 25.0f, 1e9f, 20);
 
     std::this_thread::sleep_for(milliseconds(200));
     // Same path the SIGINT handler takes.
