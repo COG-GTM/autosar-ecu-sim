@@ -26,13 +26,14 @@ void runExecutionManager(){
     float startTemp= config["sensor"]["startTemp"];
     float tempStep= config["sensor"]["tempStep"];
     float warningThreshold= config["controller"]["warningThreshold"];
+    float pressureThreshold= config["controller"].value("pressureWarningThreshold", 1e9f);
     int sensorPeriod= config["sensor"]["periodMs"];
     int controllerPeriod= config["controller"]["periodMs"];
     
     MessageQueue<SensorData> messageQueue;
 
     std::thread sensorThread(sensorApp, std::ref(messageQueue), startTemp, tempStep, sensorPeriod);
-    std::thread controllerThread(controllerApp, warningThreshold, controllerPeriod);
+    std::thread controllerThread(controllerApp, warningThreshold, pressureThreshold, controllerPeriod);
 
     sensorThread.join();
     controllerThread.join();
