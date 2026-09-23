@@ -1,3 +1,4 @@
 //File: include/execution_manager.hpp
 #pragma once
-void runExecutionManager();
+// Runs the ECU; returns false when the configuration could not be loaded.
+bool runExecutionManager();

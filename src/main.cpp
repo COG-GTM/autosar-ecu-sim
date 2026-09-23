@@ -2,6 +2,5 @@
 #include "../include/execution_manager.hpp"
 
 int main(){
-    runExecutionManager();
-    return 0;
+    return runExecutionManager() ? 0 : 1;
 }
