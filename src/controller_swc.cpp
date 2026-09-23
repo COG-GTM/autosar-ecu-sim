@@ -19,6 +19,9 @@ void controllerApp(float warningThreshold, int periodMs) {
     while(controllerState != AppState::SHUTDOWN){
         std::optional<SensorData> received = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));
         if (!received) {
+            if (queuePtr->closed()) {
+                break;
+            }
             continue;
         }
         SensorData data = *received;

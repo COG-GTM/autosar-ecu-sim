@@ -2,6 +2,7 @@
 #pragma once
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -9,10 +10,20 @@
 template <typename T>
 class MessageQueue {
 public:
+    static constexpr std::size_t kDefaultCapacity = 128;
+
+    explicit MessageQueue(std::size_t capacity = kDefaultCapacity)
+        : capacity_(capacity == 0 ? 1 : capacity) {}
+
+    // Drops the oldest pending messages to stay within capacity; never blocks the producer.
     void send(const T& message) {
         std::lock_guard<std::mutex> lock(mutex_);
         if (closed_) {
             return;
+        }
+        while (queue_.size() >= capacity_) {
+            queue_.pop();
+            ++dropped_;
         }
         queue_.push(message);
         cond_.notify_one();
@@ -50,6 +61,15 @@ public:
         return queue_.size();
     }
 
+    std::size_t capacity() const {
+        return capacity_;
+    }
+
+    std::size_t droppedCount() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return dropped_;
+    }
+
 private:
     std::optional<T> popLocked() {
         if (queue_.empty()) {
@@ -61,6 +81,8 @@ private:
     }
 
     std::queue<T> queue_;
+    const std::size_t capacity_;
+    std::size_t dropped_ = 0;
     mutable std::mutex mutex_;
     std::condition_variable cond_;
     bool closed_ = false;

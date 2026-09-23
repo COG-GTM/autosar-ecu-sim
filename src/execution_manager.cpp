@@ -6,6 +6,7 @@
 #include "../include/sensor_types.hpp"
 #include "../include/lifecycle.hpp"
 #include <nlohmann/json.hpp>
+#include<cstddef>
 #include<fstream>
 #include<thread>
 #include <iostream>
@@ -29,7 +30,9 @@ void runExecutionManager(){
     int sensorPeriod= config["sensor"]["periodMs"];
     int controllerPeriod= config["controller"]["periodMs"];
     
-    MessageQueue<SensorData> messageQueue;
+    std::size_t queueCapacity = config.value("queueCapacity", MessageQueue<SensorData>::kDefaultCapacity);
+
+    MessageQueue<SensorData> messageQueue(queueCapacity);
 
     std::thread sensorThread(sensorApp, std::ref(messageQueue), startTemp, tempStep, sensorPeriod);
     std::thread controllerThread(controllerApp, warningThreshold, controllerPeriod);
@@ -37,6 +40,12 @@ void runExecutionManager(){
     sensorThread.join();
     messageQueue.close();
     controllerThread.join();
+
+    if(messageQueue.droppedCount() > 0){
+        std::cout<<"[Execution Manager] Dropped "<<messageQueue.droppedCount()
+                 <<" sensor messages to keep the queue within its capacity of "
+                 <<queueCapacity<<"."<<std::endl;
+    }
 
     std::cout<<"[Execution Manager] All apps have shut down." <<std::endl;   
 }

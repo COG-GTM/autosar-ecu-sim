@@ -58,6 +58,27 @@ int main() {
         CHECK(!q.receive().has_value(), "drained closed queue returns nullopt immediately");
     }
 
+    // capacity bound drops the oldest messages instead of growing without limit
+    {
+        MessageQueue<int> q(3);
+        for (int i = 0; i < 10; ++i) {
+            q.send(i);
+        }
+        CHECK(q.size() == 3, "queue never exceeds its capacity");
+        CHECK(q.droppedCount() == 7, "droppedCount counts the dropped oldest messages");
+        CHECK(q.receive().value() == 7 && q.receive().value() == 8 && q.receive().value() == 9,
+              "the newest messages survive the drop-oldest policy");
+    }
+
+    // a zero capacity still keeps the most recent message
+    {
+        MessageQueue<int> q(0);
+        q.send(1);
+        q.send(2);
+        CHECK(q.capacity() == 1, "capacity is clamped to at least one message");
+        CHECK(q.size() == 1 && q.receive().value() == 2, "zero capacity keeps the newest message");
+    }
+
     std::printf("%s (%d failures)\n", failures ? "FAILED" : "PASSED", failures);
     return failures ? 1 : 0;
 }
