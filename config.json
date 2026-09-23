@@ -7,5 +7,8 @@
   "controller": {
     "warningThreshold": 25.0,
     "periodMs": 2000
+  },
+  "messageQueue": {
+    "capacity": 64
   }
 }
