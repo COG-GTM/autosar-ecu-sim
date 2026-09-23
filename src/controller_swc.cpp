@@ -11,10 +11,34 @@
 
 extern std::atomic<AppState> controllerState;
 
+namespace {
+constexpr std::chrono::milliseconds kDiscoverySlice{100};
+
+// Retries discovery in short slices so SHUTDOWN is honoured while the service is missing.
+MessageQueue<SensorData>* discoverSensorQueue() {
+    while (controllerState != AppState::SHUTDOWN) {
+        auto result = ServiceRegistry::instance()
+                          .discoverService<MessageQueue<SensorData>>("SensorDataService", kDiscoverySlice);
+        if (result) {
+            return result.service;
+        }
+        if (result.status == DiscoveryStatus::TypeMismatch) {
+            std::cerr << "[Controller] SensorDataService is registered with an unexpected type." << std::endl;
+            return nullptr;
+        }
+    }
+    return nullptr;
+}
+}  // namespace
+
 void controllerApp(float warningThreshold, int periodMs) {
     controllerState = AppState::RUNNING;
-    auto queuePtr = static_cast<MessageQueue<SensorData>*>(ServiceRegistry::instance().discoverService("SensorDataService"));
-    
+    MessageQueue<SensorData>* queuePtr = discoverSensorQueue();
+    if (queuePtr == nullptr) {
+        std::cout << "[Controller] SensorDataService unavailable. Shutting down." << std::endl;
+        return;
+    }
+
     float lastTemp =-1.0f;       
     while(controllerState != AppState::SHUTDOWN){
         std::optional<SensorData> received = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));

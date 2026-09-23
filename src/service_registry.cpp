@@ -5,14 +5,30 @@ ServiceRegistry& ServiceRegistry::instance(){
     return registry;
 }
 
-void ServiceRegistry::registerService(const std::string& name, void* servicePtr){
+void ServiceRegistry::registerServiceImpl(const std::string& name, void* servicePtr, std::type_index type){
+    if(servicePtr == nullptr){
+        return;
+    }
     std::lock_guard<std::mutex> lock(mutex_);
-    services_[name] = servicePtr;
+    services_[name] = Entry{servicePtr, type};
     cond_.notify_all();
 }
 
-void* ServiceRegistry::discoverService(const std::string& name){
+void* ServiceRegistry::discoverServiceImpl(const std::string& name,
+                                           std::type_index type,
+                                           std::chrono::milliseconds timeout,
+                                           DiscoveryStatus& status){
     std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [&] { return services_.find(name) != services_.end(); });
-    return services_[name];
+    const bool present = cond_.wait_for(lock, timeout, [&] { return services_.find(name) != services_.end(); });
+    if(!present){
+        status = DiscoveryStatus::TimedOut;
+        return nullptr;
+    }
+    const Entry& entry = services_[name];
+    if(entry.type != type){
+        status = DiscoveryStatus::TypeMismatch;
+        return nullptr;
+    }
+    status = DiscoveryStatus::Found;
+    return entry.ptr;
 }
