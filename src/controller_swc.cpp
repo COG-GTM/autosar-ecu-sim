@@ -1,3 +1,4 @@
+
 // File: src/controller_swc.cpp
 #include "../include/controller_swc.hpp"
 #include "../include/message_queue.hpp"
@@ -17,11 +18,7 @@ void controllerApp(float warningThreshold, int periodMs) {
     
     float lastTemp =-1.0f;       
     while(controllerState != AppState::SHUTDOWN){
-        std::optional<SensorData> received = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));
-        if (!received) {
-            continue;
-        }
-        SensorData data = *received;
+        SensorData data = queuePtr->receive();
         
         if (data.temperature != lastTemp) {
             std::ofstream logfile("controller_log.txt", std::ios::app);
@@ -46,3 +43,4 @@ void controllerApp(float warningThreshold, int periodMs) {
     }
     std::cout<<"[Controller] Shutting down."<<std::endl;
 }
+
