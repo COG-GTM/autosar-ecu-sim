@@ -18,11 +18,15 @@ build/test_message_queue: build tests/test_message_queue.cpp include/message_que
 build/test_shutdown: build tests/test_shutdown.cpp $(SRC)
 	$(CXX) $(CXXFLAGS) -o $@ tests/test_shutdown.cpp $(SRC) $(LDFLAGS)
 
+build/test_change_detection: build tests/test_change_detection.cpp $(SRC)
+	$(CXX) $(CXXFLAGS) -o $@ tests/test_change_detection.cpp $(SRC) $(LDFLAGS)
+
 .PHONY: test
-test: build/test_message_queue build/test_shutdown
+test: build/test_message_queue build/test_shutdown build/test_change_detection
 	./build/test_message_queue
 	./build/test_shutdown
+	./build/test_change_detection
 
 .PHONY: clean
 clean:
-	rm -f build/ecu build/test_message_queue build/test_shutdown sensor_log.txt controller_log.txt
+	rm -f build/ecu build/test_message_queue build/test_shutdown build/test_change_detection sensor_log.txt controller_log.txt
