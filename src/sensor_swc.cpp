@@ -11,7 +11,7 @@ extern std::atomic<AppState> sensorState;
 
 void sensorApp(MessageQueue<SensorData>& queue, float startTemp, float tempStep, int periodMs) {
     sensorState = AppState::RUNNING;
-    ServiceRegistry::instance().registerService("SensorDataService", &queue);
+    ServiceRegistry::instance().registerService<MessageQueue<SensorData>>("SensorDataService", &queue);
     int i = 0;
 
     while(sensorState != AppState::SHUTDOWN){
