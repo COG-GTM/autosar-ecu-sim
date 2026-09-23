@@ -5,38 +5,31 @@
 #include "../include/message_queue.hpp"
 #include "../include/sensor_types.hpp"
 #include "../include/lifecycle.hpp"
-#include <nlohmann/json.hpp>
-#include<fstream>
+#include "../include/ecu_config.hpp"
+#include<string>
 #include<thread>
 #include <iostream>
 
-using json=nlohmann::json;
-
-void runExecutionManager(){
+bool runExecutionManager(){
     setupSignalHandlers();
 
-    std::ifstream configFile("config.json");
-    if(!configFile.is_open()){
-        std::cerr<<"Failed to open config.json"<<std::endl;
-        return;
+    EcuConfig config;
+    std::string error;
+    if(!loadEcuConfig("config.json", config, error)){
+        std::cerr<<"[Execution Manager] Invalid configuration: "<<error<<std::endl;
+        return false;
     }
-    json config;
-    configFile>>config;
 
-    float startTemp= config["sensor"]["startTemp"];
-    float tempStep= config["sensor"]["tempStep"];
-    float warningThreshold= config["controller"]["warningThreshold"];
-    int sensorPeriod= config["sensor"]["periodMs"];
-    int controllerPeriod= config["controller"]["periodMs"];
-    
     MessageQueue<SensorData> messageQueue;
 
-    std::thread sensorThread(sensorApp, std::ref(messageQueue), startTemp, tempStep, sensorPeriod);
-    std::thread controllerThread(controllerApp, warningThreshold, controllerPeriod);
+    std::thread sensorThread(sensorApp, std::ref(messageQueue), config.startTemp, config.tempStep,
+                             config.sensorPeriod);
+    std::thread controllerThread(controllerApp, config.warningThreshold, config.controllerPeriod);
 
     sensorThread.join();
     messageQueue.close();
     controllerThread.join();
 
-    std::cout<<"[Execution Manager] All apps have shut down." <<std::endl;   
+    std::cout<<"[Execution Manager] All apps have shut down." <<std::endl;
+    return true;
 }
