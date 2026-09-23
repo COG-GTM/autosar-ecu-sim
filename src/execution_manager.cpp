@@ -37,5 +37,10 @@ void runExecutionManager(){
     sensorThread.join();
     controllerThread.join();
 
+    const int receivedSignal = shutdownSignal.load(std::memory_order_relaxed);
+    if(receivedSignal != 0){
+        std::cout<<"\n [Execution Manager] Shutdown signal received: "<<receivedSignal<<std::endl;
+    }
+
     std::cout<<"[Execution Manager] All apps have shut down." <<std::endl;   
 }

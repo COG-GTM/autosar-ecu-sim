@@ -1,17 +1,23 @@
 //File: src/lifecycle.cpp
 #include "../include/lifecycle.hpp"
 #include<csignal>
-#include<iostream>
 
 std::atomic<AppState> sensorState(AppState::INIT);
 std::atomic<AppState> controllerState(AppState::INIT);
+std::atomic<int> shutdownSignal(0);
 
-void handleSignal(int signal){
-    std::cout<<"\n [Execution Manager] Shutdown signal received."<< std::endl;
-    sensorState =AppState::SHUTDOWN;
-    controllerState =AppState::SHUTDOWN;
+extern "C" void handleSignal(int signalNumber){
+    shutdownSignal.store(signalNumber, std::memory_order_relaxed);
+    sensorState.store(AppState::SHUTDOWN, std::memory_order_relaxed);
+    controllerState.store(AppState::SHUTDOWN, std::memory_order_relaxed);
 }
 
 void setupSignalHandlers(){
-    std::signal(SIGINT, handleSignal);
+    struct sigaction action{};
+    action.sa_handler = handleSignal;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+
+    sigaction(SIGINT, &action, nullptr);
+    sigaction(SIGTERM, &action, nullptr);
 }

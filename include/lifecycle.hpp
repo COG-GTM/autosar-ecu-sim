@@ -10,5 +10,6 @@ enum class AppState{
 
 extern std::atomic<AppState> sensorState;
 extern std::atomic<AppState> controllerState;
+extern std::atomic<int> shutdownSignal;
 
 void setupSignalHandlers();
