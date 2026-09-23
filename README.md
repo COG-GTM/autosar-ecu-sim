@@ -11,21 +11,41 @@ This project simulates an Adaptive AUTOSAR-style ECU using open-source C++ on Li
 - **JSON configuration** (instead of ARXML) for runtime control
 - **Config-driven timing** and behavior
 - **Logging** of sensor data and controller decisions
-- **Shared Memory IPC** (to be replaced by messaging)
+- **Thread-safe message queue IPC** between the SWCs
+- **Service registry** for dynamic service discovery
+- **Lifecycle state machine** with graceful shutdown
 
 ---
 
 ## 📁 Project Structure
-autosar_ecu_sim/ ├── include/ │ ├── shared_memory.hpp │ ├── sensor_swc.hpp │ ├── controller_swc.hpp │ └── execution_manager.hpp ├── src/ │ ├── shared_memory.cpp │ ├── sensor_swc.cpp │ ├── controller_swc.cpp │ └── execution_manager.cpp ├── config.json ├── main.cpp ├── Makefile └── README.md
+```
+autosar_ecu_sim/
+├── include/
+│   ├── message_queue.hpp
+│   ├── sensor_types.hpp
+│   ├── sensor_swc.hpp
+│   ├── controller_swc.hpp
+│   ├── service_registry.hpp
+│   ├── lifecycle.hpp
+│   └── execution_manager.hpp
+├── src/
+│   ├── main.cpp
+│   ├── sensor_swc.cpp
+│   ├── controller_swc.cpp
+│   ├── service_registry.cpp
+│   ├── lifecycle.cpp
+│   └── execution_manager.cpp
+├── config.json
+├── Makefile
+└── README.md
+```
 
 
 ---
 
 ## 🧩 Next Steps (Planned)
 
-- Replace shared memory with **message queues or sockets**
-- Implement **service discovery and registration**
-- Introduce **lifecycle state machine**
+- Replace the in-process message queue with **sockets** for cross-process IPC
 - Simulate **platform deployment**
 
 ---
