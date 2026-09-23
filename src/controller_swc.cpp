@@ -7,6 +7,7 @@
 #include "../include/lifecycle.hpp"
 #include <iostream>
 #include<fstream>
+#include<optional>
 #include<thread>
 #include <chrono>
 
@@ -15,10 +16,21 @@ extern std::atomic<AppState> controllerState;
 void controllerApp(float warningThreshold, int periodMs) {
     controllerState = AppState::RUNNING;
     auto queuePtr = static_cast<MessageQueue<SensorData>*>(ServiceRegistry::instance().discoverService("SensorDataService"));
-    
+    if(queuePtr == nullptr){
+        std::cerr<<"[Controller] SensorDataService is not registered."<<std::endl;
+        return;
+    }
+
     float lastTemp =-1.0f;       
     while(controllerState != AppState::SHUTDOWN){
-        SensorData data = queuePtr->receive();
+        std::optional<SensorData> message = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));
+        if(!message){
+            if(queuePtr->isShutdown()){
+                break;
+            }
+            continue;
+        }
+        const SensorData& data = *message;
         
         if (data.temperature != lastTemp) {
             std::ofstream logfile("controller_log.txt", std::ios::app);
