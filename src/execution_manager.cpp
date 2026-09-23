@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 #include<fstream>
 #include<thread>
+#include <cstddef>
 #include <iostream>
 
 using json=nlohmann::json;
@@ -28,8 +29,10 @@ void runExecutionManager(){
     float warningThreshold= config["controller"]["warningThreshold"];
     int sensorPeriod= config["sensor"]["periodMs"];
     int controllerPeriod= config["controller"]["periodMs"];
-    
-    MessageQueue<SensorData> messageQueue;
+    std::size_t queueCapacity = config.value("messageQueue", json::object())
+                                    .value("capacity", MessageQueue<SensorData>::kDefaultCapacity);
+
+    MessageQueue<SensorData> messageQueue(queueCapacity);
 
     std::thread sensorThread(sensorApp, std::ref(messageQueue), startTemp, tempStep, sensorPeriod);
     std::thread controllerThread(controllerApp, warningThreshold, controllerPeriod);

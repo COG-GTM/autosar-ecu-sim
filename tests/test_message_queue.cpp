@@ -1,6 +1,7 @@
 // Host unit tests for include/message_queue.hpp. Build and run: make test
 #include "../include/message_queue.hpp"
 #include <chrono>
+#include <cstddef>
 #include <cstdio>
 #include <thread>
 
@@ -56,6 +57,41 @@ int main() {
         CHECK(q.size() == 1, "send after close is dropped");
         CHECK(q.receive().value() == 42, "pending message readable after close");
         CHECK(!q.receive().has_value(), "drained closed queue returns nullopt immediately");
+    }
+
+    // bounded capacity: a full queue evicts the oldest message instead of growing
+    {
+        MessageQueue<int> q(3);
+        CHECK(q.capacity() == 3, "capacity reports the configured bound");
+        for (int i = 1; i <= 10; ++i) {
+            q.send(i);
+        }
+        CHECK(q.size() == 3, "size never exceeds the capacity under overload");
+        CHECK(q.overflowCount() == 7, "overflowCount counts evicted messages");
+        CHECK(q.receive().value() == 8 && q.receive().value() == 9 && q.receive().value() == 10,
+              "the newest messages survive, the oldest are evicted");
+    }
+
+    // a slow consumer keeps draining fresh data instead of an unbounded backlog
+    {
+        MessageQueue<int> q(2);
+        q.send(1); q.send(2); q.send(3);
+        CHECK(q.receive().value() == 2, "consumer sees the oldest retained message");
+        q.send(4); q.send(5); q.send(6);
+        CHECK(q.size() == 2 && q.receive().value() == 5,
+              "backlog stays bounded across repeated overflow");
+    }
+
+    // default capacity is bounded too
+    {
+        MessageQueue<int> q;
+        CHECK(q.capacity() == MessageQueue<int>::kDefaultCapacity,
+              "default-constructed queue is bounded");
+        for (std::size_t i = 0; i < MessageQueue<int>::kDefaultCapacity + 100; ++i) {
+            q.send(static_cast<int>(i));
+        }
+        CHECK(q.size() == MessageQueue<int>::kDefaultCapacity,
+              "default capacity bounds the backlog");
     }
 
     std::printf("%s (%d failures)\n", failures ? "FAILED" : "PASSED", failures);
