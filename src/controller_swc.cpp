@@ -13,7 +13,12 @@ extern std::atomic<AppState> controllerState;
 
 void controllerApp(float warningThreshold, int periodMs) {
     controllerState = AppState::RUNNING;
-    auto queuePtr = static_cast<MessageQueue<SensorData>*>(ServiceRegistry::instance().discoverService("SensorDataService"));
+    auto queuePtr = ServiceRegistry::instance().discoverService<MessageQueue<SensorData>>("SensorDataService");
+    if (queuePtr == nullptr) {
+        std::cerr << "[Controller] SensorDataService unavailable, shutting down." << std::endl;
+        controllerState = AppState::SHUTDOWN;
+        return;
+    }
     
     float lastTemp =-1.0f;       
     while(controllerState != AppState::SHUTDOWN){
