@@ -12,4 +12,5 @@ extern std::atomic<AppState> sensorState;
 extern std::atomic<AppState> controllerState;
 extern std::atomic<int> shutdownSignal;
 
+extern "C" void handleSignal(int signalNumber);
 void setupSignalHandlers();

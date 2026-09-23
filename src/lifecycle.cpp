@@ -6,6 +6,7 @@ std::atomic<AppState> sensorState(AppState::INIT);
 std::atomic<AppState> controllerState(AppState::INIT);
 std::atomic<int> shutdownSignal(0);
 
+// Async-signal-safe: only lock-free atomic stores, no iostream.
 extern "C" void handleSignal(int signalNumber){
     shutdownSignal.store(signalNumber, std::memory_order_relaxed);
     sensorState.store(AppState::SHUTDOWN, std::memory_order_relaxed);

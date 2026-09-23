@@ -35,6 +35,7 @@ void runExecutionManager(){
     std::thread controllerThread(controllerApp, warningThreshold, controllerPeriod);
 
     sensorThread.join();
+    messageQueue.close();
     controllerThread.join();
 
     const int receivedSignal = shutdownSignal.load(std::memory_order_relaxed);
