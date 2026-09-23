@@ -2,7 +2,7 @@ CXX=g++
 CXXFLAGS=-std=c++17 -Iinclude -pthread -Wall -Wextra
 LDFLAGS=
 
-SRC=src/sensor_swc.cpp src/controller_swc.cpp src/execution_manager.cpp src/service_registry.cpp src/lifecycle.cpp
+SRC=src/sensor_swc.cpp src/controller_swc.cpp src/execution_manager.cpp src/service_registry.cpp src/lifecycle.cpp src/ecu_config.cpp
 
 all: ecu
 
@@ -18,11 +18,15 @@ build/test_message_queue: build tests/test_message_queue.cpp include/message_que
 build/test_shutdown: build tests/test_shutdown.cpp $(SRC)
 	$(CXX) $(CXXFLAGS) -o $@ tests/test_shutdown.cpp $(SRC) $(LDFLAGS)
 
+build/test_config: build tests/test_config.cpp src/ecu_config.cpp include/ecu_config.hpp
+	$(CXX) $(CXXFLAGS) -o $@ tests/test_config.cpp src/ecu_config.cpp $(LDFLAGS)
+
 .PHONY: test
-test: build/test_message_queue build/test_shutdown
+test: build/test_message_queue build/test_shutdown build/test_config
 	./build/test_message_queue
 	./build/test_shutdown
+	./build/test_config
 
 .PHONY: clean
 clean:
-	rm -f build/ecu build/test_message_queue build/test_shutdown sensor_log.txt controller_log.txt
+	rm -f build/ecu build/test_message_queue build/test_shutdown build/test_config sensor_log.txt controller_log.txt
