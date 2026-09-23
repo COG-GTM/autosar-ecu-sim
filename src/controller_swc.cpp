@@ -4,6 +4,7 @@
 #include "../include/sensor_types.hpp"
 #include "../include/service_registry.hpp"
 #include "../include/lifecycle.hpp"
+#include <algorithm>
 #include <iostream>
 #include<fstream>
 #include<thread>
@@ -13,8 +14,23 @@ extern std::atomic<AppState> controllerState;
 
 void controllerApp(float warningThreshold, int periodMs) {
     controllerState = AppState::RUNNING;
-    auto queuePtr = static_cast<MessageQueue<SensorData>*>(ServiceRegistry::instance().discoverService("SensorDataService"));
-    
+
+    // Bounded discovery: retry until the service appears or shutdown is requested,
+    // so a missing or late producer can never park this thread forever.
+    const auto discoveryPoll = std::chrono::milliseconds(std::max(1, std::min(periodMs, 100)));
+    MessageQueue<SensorData>* queuePtr = nullptr;
+    while (controllerState != AppState::SHUTDOWN) {
+        queuePtr = ServiceRegistry::instance().discoverServiceAs<MessageQueue<SensorData>>(
+            "SensorDataService", discoveryPoll);
+        if (queuePtr) {
+            break;
+        }
+    }
+    if (!queuePtr) {
+        std::cout << "[Controller] Shutting down." << std::endl;
+        return;
+    }
+
     float lastTemp =-1.0f;       
     while(controllerState != AppState::SHUTDOWN){
         std::optional<SensorData> received = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));
