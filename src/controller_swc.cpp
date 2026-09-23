@@ -1,4 +1,3 @@
-
 // File: src/controller_swc.cpp
 #include "../include/controller_swc.hpp"
 #include "../include/message_queue.hpp"
@@ -7,7 +6,6 @@
 #include "../include/lifecycle.hpp"
 #include <iostream>
 #include<fstream>
-#include<optional>
 #include<thread>
 #include <chrono>
 
@@ -16,21 +14,17 @@ extern std::atomic<AppState> controllerState;
 void controllerApp(float warningThreshold, int periodMs) {
     controllerState = AppState::RUNNING;
     auto queuePtr = static_cast<MessageQueue<SensorData>*>(ServiceRegistry::instance().discoverService("SensorDataService"));
-    if(queuePtr == nullptr){
-        std::cerr<<"[Controller] SensorDataService is not registered."<<std::endl;
-        return;
-    }
-
+    
     float lastTemp =-1.0f;       
     while(controllerState != AppState::SHUTDOWN){
-        std::optional<SensorData> message = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));
-        if(!message){
-            if(queuePtr->isShutdown()){
+        std::optional<SensorData> received = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));
+        if (!received) {
+            if (queuePtr->closed()) {
                 break;
             }
             continue;
         }
-        const SensorData& data = *message;
+        SensorData data = *received;
         
         if (data.temperature != lastTemp) {
             std::ofstream logfile("controller_log.txt", std::ios::app);
@@ -55,4 +49,3 @@ void controllerApp(float warningThreshold, int periodMs) {
     }
     std::cout<<"[Controller] Shutting down."<<std::endl;
 }
-

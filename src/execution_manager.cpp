@@ -38,7 +38,7 @@ void runExecutionManager(){
     std::thread controllerThread(controllerApp, warningThreshold, controllerPeriod);
 
     sensorThread.join();
-    messageQueue.shutdown();
+    messageQueue.close();
     controllerThread.join();
 
     if(messageQueue.droppedCount() > 0){
