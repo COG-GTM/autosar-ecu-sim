@@ -35,6 +35,7 @@ void runExecutionManager(){
     std::thread controllerThread(controllerApp, warningThreshold, controllerPeriod);
 
     sensorThread.join();
+    messageQueue.close();
     controllerThread.join();
 
     std::cout<<"[Execution Manager] All apps have shut down." <<std::endl;   

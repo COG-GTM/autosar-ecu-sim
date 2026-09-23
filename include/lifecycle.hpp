@@ -11,4 +11,5 @@ enum class AppState{
 extern std::atomic<AppState> sensorState;
 extern std::atomic<AppState> controllerState;
 
+void handleSignal(int signal);
 void setupSignalHandlers();
