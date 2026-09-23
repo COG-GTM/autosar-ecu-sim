@@ -14,13 +14,17 @@ void sensorApp(MessageQueue<SensorData>& queue, float startTemp, float tempStep,
     ServiceRegistry::instance().registerService("SensorDataService", &queue);
     int i = 0;
 
+    std::ofstream logfile("sensor_log.txt", std::ios::app);
+    if(!logfile.is_open()){
+        std::cerr<<"[Sensor] Unable to open sensor_log.txt; continuing without file logging."<<std::endl;
+    }
+
     while(sensorState != AppState::SHUTDOWN){
         SensorData data;
         data.temperature = startTemp + i * tempStep;
         data.pressure = 1.0f + (i * 0.1f);
         queue.send(data);
 
-        std::ofstream logfile("sensor_log.txt", std::ios::app);
         std::cout<<"[Sensor] Temp = "<<data.temperature<<", Pressure = "<<data.pressure << std::endl;
         if(logfile.is_open()){
             logfile<<"Temp = "<<data.temperature<<", Pressure = "<<data.pressure<<std::endl;  
