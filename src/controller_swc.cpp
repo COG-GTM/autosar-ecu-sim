@@ -15,7 +15,13 @@ void controllerApp(float warningThreshold, int periodMs) {
     controllerState = AppState::RUNNING;
     auto queuePtr = static_cast<MessageQueue<SensorData>*>(ServiceRegistry::instance().discoverService("SensorDataService"));
     
-    float lastTemp =-1.0f;       
+    float lastTemp =-1.0f;
+
+    std::ofstream logfile("controller_log.txt", std::ios::app);
+    if (!logfile.is_open()) {
+        std::cerr << "[Controller] Unable to open controller_log.txt; continuing without file logging." << std::endl;
+    }
+
     while(controllerState != AppState::SHUTDOWN){
         std::optional<SensorData> received = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));
         if (!received) {
@@ -24,7 +30,6 @@ void controllerApp(float warningThreshold, int periodMs) {
         SensorData data = *received;
         
         if (data.temperature != lastTemp) {
-            std::ofstream logfile("controller_log.txt", std::ios::app);
             std::cout << "[Controller] Temp = " << data.temperature << ", Pressure = " << data.pressure;
             if (logfile.is_open()) {
                 logfile << "Temp = " << data.temperature << ", Pressure = " << data.pressure;
