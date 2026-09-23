@@ -5,30 +5,33 @@
 #include "../include/message_queue.hpp"
 #include "../include/sensor_types.hpp"
 #include "../include/lifecycle.hpp"
-#include <nlohmann/json.hpp>
-#include<fstream>
+#include "../include/config_loader.hpp"
 #include<thread>
 #include <iostream>
-
-using json=nlohmann::json;
 
 void runExecutionManager(){
     setupSignalHandlers();
 
-    std::ifstream configFile("config.json");
-    if(!configFile.is_open()){
-        std::cerr<<"Failed to open config.json"<<std::endl;
+    float startTemp=0.0f;
+    float tempStep=0.0f;
+    float warningThreshold=0.0f;
+    int sensorPeriod=0;
+    int controllerPeriod=0;
+
+    try{
+        const nlohmann::json config= config::load("config.json");
+        startTemp= config::requireFloat(config, "sensor.startTemp");
+        tempStep= config::requireFloat(config, "sensor.tempStep");
+        warningThreshold= config::requireFloat(config, "controller.warningThreshold");
+        sensorPeriod= config::requireInt(config, "sensor.periodMs");
+        controllerPeriod= config::requireInt(config, "controller.periodMs");
+    }
+    catch(const config::ConfigError& e){
+        std::cerr<<"[Execution Manager] Configuration error: "<<e.what()<<std::endl;
         return;
     }
-    json config;
-    configFile>>config;
 
-    float startTemp= config["sensor"]["startTemp"];
-    float tempStep= config["sensor"]["tempStep"];
-    float warningThreshold= config["controller"]["warningThreshold"];
-    int sensorPeriod= config["sensor"]["periodMs"];
-    int controllerPeriod= config["controller"]["periodMs"];
-    
+
     MessageQueue<SensorData> messageQueue;
 
     std::thread sensorThread(sensorApp, std::ref(messageQueue), startTemp, tempStep, sensorPeriod);
