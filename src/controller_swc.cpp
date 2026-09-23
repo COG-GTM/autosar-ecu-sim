@@ -13,7 +13,13 @@
 extern std::atomic<AppState> controllerState;
 
 void controllerApp(float warningThreshold, int periodMs) {
-    controllerState = AppState::RUNNING;
+    // Only INIT -> RUNNING, so a shutdown requested before this thread starts is not erased.
+    AppState expected = AppState::INIT;
+    if (!controllerState.compare_exchange_strong(expected, AppState::RUNNING)
+        && expected == AppState::SHUTDOWN) {
+        std::cout << "[Controller] Shutting down." << std::endl;
+        return;
+    }
 
     // Bounded discovery: retry until the service appears or shutdown is requested,
     // so a missing or late producer can never park this thread forever.

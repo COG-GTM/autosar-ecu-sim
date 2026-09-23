@@ -10,7 +10,13 @@
 extern std::atomic<AppState> sensorState;    
 
 void sensorApp(MessageQueue<SensorData>& queue, float startTemp, float tempStep, int periodMs) {
-    sensorState = AppState::RUNNING;
+    // Only INIT -> RUNNING, so a shutdown requested before this thread starts is not erased.
+    AppState expected = AppState::INIT;
+    if (!sensorState.compare_exchange_strong(expected, AppState::RUNNING)
+        && expected == AppState::SHUTDOWN) {
+        std::cout << "[Sensor] Shutting down. ";
+        return;
+    }
     ServiceRegistry::instance().registerService("SensorDataService", &queue);
     int i = 0;
 

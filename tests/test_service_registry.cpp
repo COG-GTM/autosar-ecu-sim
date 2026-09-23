@@ -2,6 +2,9 @@
 // (or misnamed) service can no longer park the calling thread forever.
 #include "../include/controller_swc.hpp"
 #include "../include/lifecycle.hpp"
+#include "../include/message_queue.hpp"
+#include "../include/sensor_swc.hpp"
+#include "../include/sensor_types.hpp"
 #include "../include/service_registry.hpp"
 #include <chrono>
 #include <csignal>
@@ -53,6 +56,25 @@ int main() {
     if (!finished) {
         std::printf("FAILED (%d failures)\n", failures);
         std::_Exit(1);   // controller is stuck in discovery; cannot join
+    }
+
+    // SHUTDOWN requested before the SWC threads start must not be erased by startup.
+    sensorState = AppState::INIT;
+    controllerState = AppState::INIT;
+    handleSignal(SIGINT);
+    MessageQueue<SensorData> queue;
+    std::thread earlySensor(sensorApp, std::ref(queue), 20.0f, 1.0f, 3000);
+    std::thread earlyController(controllerApp, 25.0f, 3000);
+    auto earlyJoined = std::async(std::launch::async, [&] {
+        earlySensor.join();
+        queue.close();
+        earlyController.join();
+    });
+    bool earlyFinished = earlyJoined.wait_for(seconds(10)) == std::future_status::ready;
+    check(earlyFinished, "SWCs started after SHUTDOWN exit immediately");
+    if (!earlyFinished) {
+        std::printf("FAILED (%d failures)\n", failures);
+        std::_Exit(1);   // threads latched RUNNING over SHUTDOWN; cannot join
     }
 
     if (failures > 0) {
