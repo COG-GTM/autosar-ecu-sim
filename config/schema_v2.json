@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/COG-GTM/autosar-ecu-sim/config/schema_v2.json",
+  "title": "autosar-ecu-sim config schema v2",
+  "description": "Every field is optional and falls back to its default. Cross-field rules enforced at start-up: hysteresis.<channel> < thresholds.<channel>; sensor.periodMs <= controller.periodMs.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "enum": [1, 2], "default": 1 },
+    "sensor": {
+      "type": "object",
+      "properties": {
+        "startTemp": { "type": "number", "default": 20.0 },
+        "tempStep": { "type": "number", "default": 1.0 },
+        "startPressure": { "type": "number", "default": 1.0 },
+        "pressureStep": { "type": "number", "default": 0.1 },
+        "rampSteps": { "type": "integer", "minimum": 0, "default": 0, "description": "0 = monotonic ramp; N = triangle wave rising N samples then falling N samples" },
+        "tempNoise": { "type": "number", "default": 0.0, "description": "Alternating +/- offset added to each temperature sample" },
+        "pressureNoise": { "type": "number", "default": 0.0, "description": "Alternating +/- offset added to each pressure sample" },
+        "periodMs": { "type": "integer", "exclusiveMinimum": 0, "default": 1000 }
+      }
+    },
+    "controller": {
+      "type": "object",
+      "properties": {
+        "thresholds": {
+          "type": "object",
+          "properties": {
+            "temperature": { "type": "number", "minimum": 0, "default": 35.0, "description": "degC; alarm raised when value >= threshold" },
+            "pressure": { "type": "number", "minimum": 0, "default": 3.0, "description": "bar; alarm raised when value >= threshold" }
+          }
+        },
+        "hysteresis": {
+          "type": "object",
+          "properties": {
+            "temperature": { "type": "number", "minimum": 0, "default": 2.0, "description": "degC; alarm cleared when value < threshold - hysteresis" },
+            "pressure": { "type": "number", "minimum": 0, "default": 0.3, "description": "bar; alarm cleared when value < threshold - hysteresis" }
+          }
+        },
+        "periodMs": { "type": "integer", "exclusiveMinimum": 0, "default": 1000, "description": "Maximum wait for a sample before re-checking lifecycle state" },
+        "warningThreshold": { "type": "number", "minimum": 0, "deprecated": true, "description": "v1 alias of thresholds.temperature" },
+        "pressureWarningThreshold": { "type": "number", "minimum": 0, "deprecated": true, "description": "v1 alias of thresholds.pressure" }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "properties": {
+        "capacity": { "type": "integer", "minimum": 1, "default": 256, "description": "Ring-buffer size; oldest event dropped on overflow" },
+        "outputFile": { "type": "string", "minLength": 1, "default": "diagnostics/events.json" }
+      }
+    }
+  }
+}
