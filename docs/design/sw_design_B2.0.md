@@ -94,9 +94,11 @@ Rules and rationale:
   `v < T − H` strictly, so `v == T − H` holds the alarm. Both edges are covered by tests.
 - **NaN samples:** every comparison against NaN is false, so the alarm simply holds its
   state — a corrupt sample can neither raise nor clear an alarm. Config values are validated
-  as finite at load (§3.4), so `T`/`H` can never be NaN at this point. ±∞ is *not*
-  special-cased: `+∞ ≥ T` raises and `−∞ < T − H` clears; sensor samples are finite by
-  construction, so this is out-of-contract input.
+  as finite at load (§3.4), so `T`/`H` can never be NaN at this point. **±∞ is accepted,
+  not special-cased:** it compares like a saturated value — `+∞ ≥ T` raises (the failsafe
+  behaviour for an out-of-range-high reading), `−∞ < T − H` clears. Finite config can yield
+  infinite samples by arithmetic overflow, so the alarm defines behaviour for them rather
+  than rejecting them.
 - **First sample already ≥ T:** the initial state is `Normal`, so the first sample raises
   immediately — no warm-up suppression.
 - **Config change at runtime:** `Config` is immutable after construction. B2.0 has no
@@ -326,9 +328,14 @@ argument (§1.4, §4): the controller loop has **no post-sample sleep** — it r
 `receiveFor` immediately after evaluating a sample — and queue hand-off is O(1). The queue
 therefore never grows faster than the sensor produces, each queued sample is evaluated on
 arrival, and worst-case detection latency for a physical crossing is `≤ sensor.periodMs +
-wake-up ≈ ≤ controller.periodMs`. Note the rule does not need the inverse direction either:
-a faster producer is already handled, because the controller drains continuously rather than
-sampling once per period. **Not yet implemented on the AE-10 branch — rework item R-2 (§7.2).**
+wake-up ≈ ≤ controller.periodMs`. This holds under one explicit assumption: per-sample
+processing time in the controller loop is `≪ sensor.periodMs` — true by construction (two
+float comparisons, an occasional queue send and a log write; no blocking I/O or sleeps in
+the loop). If that assumption ever broke the design degrades gracefully — every sample is
+still evaluated exactly once, just delayed by the backlog. Note the rule does not need the
+inverse direction either: a faster producer is already handled, because the controller
+drains continuously rather than sampling once per period. **Not yet implemented on the
+AE-10 branch — rework item R-2 (§7.2).**
 
 ---
 
