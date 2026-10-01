@@ -92,9 +92,11 @@ Rules and rationale:
 
 - **Boundary equality is asymmetric on purpose:** `v == T` raises (≥), but clearing requires
   `v < T − H` strictly, so `v == T − H` holds the alarm. Both edges are covered by tests.
-- **NaN / non-finite samples:** every comparison against NaN is false, so the alarm simply
-  holds its state — a corrupt sample can neither raise nor clear an alarm. Config values are
-  validated as finite at load (§3.4), so `T`/`H` can never be NaN at this point.
+- **NaN samples:** every comparison against NaN is false, so the alarm simply holds its
+  state — a corrupt sample can neither raise nor clear an alarm. Config values are validated
+  as finite at load (§3.4), so `T`/`H` can never be NaN at this point. ±∞ is *not*
+  special-cased: `+∞ ≥ T` raises and `−∞ < T − H` clears; sensor samples are finite by
+  construction, so this is out-of-contract input.
 - **First sample already ≥ T:** the initial state is `Normal`, so the first sample raises
   immediately — no warm-up suppression.
 - **Config change at runtime:** `Config` is immutable after construction. B2.0 has no
@@ -319,8 +321,14 @@ EM as `[Execution Manager] Config error: <text>` and the ECU refuses to start wi
 
 The `sensor.periodMs ≤ controller.periodMs` rule (A-03) is what makes the SWR-204 latency
 bound expressible: a raise can only be observed when a crossing sample exists, so the producer
-period must not exceed the bound the controller is required to meet. **Not yet implemented on
-the AE-10 branch — rework item R-2 (§7.2).**
+period must not exceed the bound the controller is required to meet. Two properties close the
+argument (§1.4, §4): the controller loop has **no post-sample sleep** — it returns to
+`receiveFor` immediately after evaluating a sample — and queue hand-off is O(1). The queue
+therefore never grows faster than the sensor produces, each queued sample is evaluated on
+arrival, and worst-case detection latency for a physical crossing is `≤ sensor.periodMs +
+wake-up ≈ ≤ controller.periodMs`. Note the rule does not need the inverse direction either:
+a faster producer is already handled, because the controller drains continuously rather than
+sampling once per period. **Not yet implemented on the AE-10 branch — rework item R-2 (§7.2).**
 
 ---
 
