@@ -334,11 +334,14 @@ two float comparisons, an occasional queue send, and one short line of logging p
 **Logging is the dominant per-sample cost and is synchronous** (`std::cout` plus an
 `ofstream` append); these writes are kernel-buffered and ~100 bytes, so they are cheap in
 practice, but they are not guaranteed non-blocking — a stalled disk or a redirected console
-can park the loop. If logging ever becomes the bottleneck, queue growth would show up in
-`dropped`/latency before correctness is lost; the stated bound is a design intent, and the
-mitigation if it stops holding is a decoupled logger (e.g. an async sink on a dedicated
-thread), not a change to the alarm path. In all cases the design degrades gracefully — every
-sample is still evaluated exactly once, just delayed by the backlog. Note the rule does not need the
+can park the loop. If logging ever becomes the bottleneck, samples accumulate in the
+(unbounded) sensor queue — its symptom is stale samples and rising memory; the `dropped`
+counter only reflects diagnostic-event overflow, not sensor backlog, so B2.0 carries no
+sensor-queue-depth signal (adding one is a candidate future diagnostic). The stated bound is
+a design intent, and the mitigation if it stops holding is a decoupled logger (e.g. an
+async sink on a dedicated thread), not a change to the alarm path. In all cases the design
+degrades gracefully — every sample is still evaluated exactly once, just delayed by the
+backlog. Note the rule does not need the
 inverse direction either: a faster producer is already handled, because the controller
 drains continuously rather than sampling once per period. **Not yet implemented on the
 AE-10 branch — rework item R-2 (§7.2).**
