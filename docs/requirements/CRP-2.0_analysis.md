@@ -139,7 +139,7 @@ Questions issued to the customer on 2026-10-01 (AE-5 comment). Agreed answer dat
 | A-05 | CR-02 | Hysteresis applies to both channels and is calibrated **independently per channel** (defaults 2.0 °C / 0.3 bar). | CR-02 gives a distinct default per channel; CR-04 makes all hysteresis values calibratable. Consequence: the CR-02 change expected in CRP-2.1 (AE-17, "independently calibratable per channel") is already covered by B2.0 and would be no-impact. |
 | A-06 | CR-02 | Clear condition is `value < threshold − hysteresis` (strict); inside the dead band the state is held. | Customer wording "falls below". |
 | A-07 | CR-02 | Each channel starts in Normal; a first sample at/above threshold raises immediately. NaN/non-finite samples do not change state. | Fail-towards-warning at start; invalid samples carry no information. |
-| A-08 | CR-03 | Events are held in a bounded in-memory ring buffer (default capacity 256, calibratable; overwrite-oldest with a dropped-event counter) and written to `diagnostics/events.json` at orderly shutdown (SIGINT/SIGTERM or normal exit). Events are lost on SIGKILL/crash. | "Retrievable after the run" requires persistence; dump-at-shutdown keeps the hot path free of file I/O. |
+| A-08 | CR-03 | Events are held in a bounded in-memory buffer (default capacity 256, calibratable) and written to `diagnostics/events.json` at orderly shutdown (SIGINT/SIGTERM or normal exit). Events are lost on SIGKILL/crash. CR-03 ("every" transition) is met only while the transitions in a run stay within capacity. On overflow, the oldest events are overwritten and a persisted `dropped` count makes the incomplete history detectable after the run. **SE to confirm** that the customer accepts this capacity limit. | "Retrievable after the run" requires persistence; dump-at-shutdown keeps the hot path free of file I/O. The bound protects memory on long or oscillating runs. With the hysteresis from A-05/A-06, 256 transitions is far above the number expected in a nominal run. |
 | A-09 | CR-03 | Event fields: `timestamp` (ISO-8601 UTC, ms resolution, system clock), `channel` (`temperature` \| `pressure`), `value`, `threshold`, `kind` (`raise` \| `clear`). | Field set from the ticket's question; sufficient to reconstruct every excursion. |
 | A-10 | CR-03 | "DTC-style" means one structured, timestamped record per transition; no UDS/ISO 14229 DTC numbers, status bytes or freeze frames in B2.0. | No diagnostic protocol exists in the simulator; **deferred** to a future package if required. |
 | A-11 | CR-03 | Exactly one event per raise and one per clear; repeated samples in the same state produce none. | Consistent with CR-02 "no chatter". |
@@ -148,7 +148,7 @@ Questions issued to the customer on 2026-10-01 (AE-5 comment). Agreed answer dat
 | A-14 | CR-04 | Calibration is read once at start-up; a restart is required to apply a change. Runtime hot-reload is **deferred**. | "Without recompiling" ≠ "without restarting"; matches current runtime. |
 | A-15 | CR-04 | "Parity with ARXML calibration parameters" means equivalent calibratability through JSON; ARXML import/export is **deferred**. | Project uses JSON instead of ARXML by design (README). |
 | A-16 | CR-05 | The budget applies to both raise and clear transitions. | Clear is an alarm emission of the same state machine. |
-| A-17 | CR-05 | CR-05 is guaranteed only for `sensor.periodMs ≤ controller.periodMs`; other combinations are rejected or warned by config validation (rule defined in AE-15). | A sensor slower than the controller period cannot guarantee a sample-to-alarm path within one controller period. |
+| A-17 | CR-05 | CR-05 holds for any `sensor.periodMs` / `controller.periodMs` combination if the queue delay plus processing time of a sample stays ≤ `controller.periodMs`. In practice the controller must evaluate every queued sample on arrival or at each cycle, and the queue must not grow without bound. AE-15 derives the bound and the config-validation rule, if any. | A-12 measures from publish, so publish frequency alone does not affect latency; only queueing (F-1) and processing delay do. |
 
 ## 6. Baseline B2.0 record
 
@@ -160,7 +160,7 @@ Questions issued to the customer on 2026-10-01 (AE-5 comment). Agreed answer dat
 | Frozen on | 2026-10-01 |
 | Code baseline | `main` @ `c8ca105` + PR #2 @ `b88704e` |
 | Content | CR-01 … CR-05 + EX-01, dispositions §2, assumptions A-01 … A-17 §5 |
-| Verification | `sha256sum -c docs/requirements/B2.0.sha256` |
+| Verification | `cd docs/requirements && sha256sum -c B2.0.sha256` |
 | Approval | System Engineer approval on AE-5 / this PR |
 
 From this point no requirement text or assumption in B2.0 changes without the change-point process (AE-17 → re-open AE-5 → CRP-2.0 → 2.x diff on AE-4).
@@ -199,7 +199,7 @@ Link audit (2026-10-01): every Blocks and Relates link above exists in Jira; no 
 | To | Item |
 |---|---|
 | AE-6 | SYS-REQ-100/101 use `≥` (A-03), SYS-REQ-101 default 35 °C (A-04), SYS-REQ-105 measured per A-12/A-16. |
-| AE-7 / AE-15 | F-4: a publish timestamp in `SensorData` (or harness stamping) contradicts "sensorApp → unchanged interface"; decide and record in an ADR. Period rule A-17. |
+| AE-7 / AE-15 | F-4: a publish timestamp in `SensorData` (or harness stamping) contradicts "sensorApp → unchanged interface"; decide and record in an ADR. Queue/processing-delay bound A-17. |
 | AE-20 | Align raise condition to `≥` (A-03); NaN handling per A-07. |
 | AE-19 | Event fields/format per A-09; v1 aliases per A-13. |
 | AE-10 / PR #18 | Implementation started before B2.0 was frozen; reconcile against A-01 … A-17 through the AE-22 gate. |
