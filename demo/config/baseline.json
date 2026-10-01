@@ -1,22 +1,25 @@
 {
   "schemaVersion": 2,
   "sensor": {
-    "startTemp": 20.0,
-    "tempStep": 1.0,
+    "startTemp": 30.0,
+    "tempStep": 0.5,
     "startPressure": 1.0,
     "pressureStep": 0.1,
-    "periodMs": 1000
+    "rampSteps": 24,
+    "tempNoise": 0.6,
+    "pressureNoise": 0.08,
+    "periodMs": 500
   },
   "controller": {
     "thresholds": {
-      "temperature": 35.0,
-      "pressure": 3.0
+      "temperature": 60.0,
+      "pressure": 10.0
     },
     "hysteresis": {
       "temperature": 2.0,
       "pressure": 0.3
     },
-    "periodMs": 1000
+    "periodMs": 500
   },
   "diagnostics": {
     "capacity": 256,
