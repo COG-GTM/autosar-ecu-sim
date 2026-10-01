@@ -32,7 +32,8 @@ void runExecutionManager(){
     MessageQueue<SensorData> messageQueue;
 
     std::thread sensorThread(sensorApp, std::ref(messageQueue), startTemp, tempStep, sensorPeriod);
-    std::thread controllerThread(controllerApp, warningThreshold, controllerPeriod);
+    std::thread controllerThread(static_cast<void (*)(float, int)>(controllerApp), warningThreshold,
+                                 controllerPeriod);
 
     sensorThread.join();
     messageQueue.close();
