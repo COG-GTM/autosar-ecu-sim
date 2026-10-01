@@ -26,12 +26,15 @@ run_ecu() {  # run_ecu <name> <config>
   echo
   # ECU reads ./config.json; SIGINT triggers the ExecutionManager's graceful shutdown.
   (cd "$wd" && timeout -s INT "$DURATION" "$ROOT/build/ecu" | tee "$OUT/ecu_$name.log") || true
+  # DiagnosticEventService dumps its ring buffer at shutdown.
+  cp "$wd/diagnostics/events.json" "$OUT/events_$name.json"
+  echo "diagnostics: $(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(len(d["events"]), "events,", d["dropped"], "dropped")' "$OUT/events_$name.json") -> demo/out/events_$name.json"
 }
 
 banner "2/4  Baseline calibration"
 run_ecu baseline "$DEMO/config/baseline.json"
 
-banner "3/4  Re-calibrate thresholds via config.json ONLY (no rebuild)"
+banner "3/4  Re-calibrate thresholds/hysteresis via config.json ONLY (no rebuild)"
 diff --color=always "$DEMO/config/baseline.json" "$DEMO/config/calibrated.json" || true
 run_ecu calibrated "$DEMO/config/calibrated.json"
 

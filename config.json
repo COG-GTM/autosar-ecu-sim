@@ -1,12 +1,25 @@
 {
+  "schemaVersion": 2,
   "sensor": {
     "startTemp": 20.0,
     "tempStep": 1.0,
+    "startPressure": 1.0,
+    "pressureStep": 0.1,
     "periodMs": 1000
   },
   "controller": {
-    "warningThreshold": 25.0,
-    "pressureWarningThreshold": 3.0,
-    "periodMs": 2000
+    "thresholds": {
+      "temperature": 35.0,
+      "pressure": 3.0
+    },
+    "hysteresis": {
+      "temperature": 2.0,
+      "pressure": 0.3
+    },
+    "periodMs": 1000
+  },
+  "diagnostics": {
+    "capacity": 256,
+    "outputFile": "diagnostics/events.json"
   }
 }

@@ -10,15 +10,29 @@
 
 extern std::atomic<AppState> sensorState;    
 
-void sensorApp(MessageQueue<SensorData>& queue, float startTemp, float tempStep, int periodMs) {
+SensorData sensorSample(const SensorConfig& config, int index) {
+    int phase = index;
+    if (config.rampSteps > 0) {
+        int period = 2 * config.rampSteps;
+        phase = index % period;
+        if (phase > config.rampSteps) {
+            phase = period - phase;
+        }
+    }
+    float noiseSign = (index % 2 == 0) ? 1.0f : -1.0f;
+    SensorData data;
+    data.temperature = config.startTemp + phase * config.tempStep + noiseSign * config.tempNoise;
+    data.pressure = config.startPressure + phase * config.pressureStep + noiseSign * config.pressureNoise;
+    return data;
+}
+
+void sensorApp(MessageQueue<SensorData>& queue, SensorConfig config) {
     sensorState = AppState::RUNNING;
     ServiceRegistry::instance().registerService("SensorDataService", &queue);
     int i = 0;
 
     while(sensorState != AppState::SHUTDOWN){
-        SensorData data;
-        data.temperature = startTemp + i * tempStep;
-        data.pressure = 1.0f + (i * 0.1f);
+        SensorData data = sensorSample(config, i);
         queue.send(data);
 
         std::ofstream logfile("sensor_log.txt", std::ios::app);
@@ -29,7 +43,7 @@ void sensorApp(MessageQueue<SensorData>& queue, float startTemp, float tempStep,
             logfile<<line.str()<<std::endl;
         }
         ++i;
-        std::this_thread::sleep_for(std::chrono::milliseconds(periodMs));
+        std::this_thread::sleep_for(std::chrono::milliseconds(config.periodMs));
     }
     std::cout<<"[Sensor] Shutting down. ";
 }

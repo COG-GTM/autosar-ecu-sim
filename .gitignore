@@ -4,3 +4,8 @@ build/
 *.txt
 *.swp
 .DS_Store
+diagnostics/
+__pycache__/
+demo/out/run_*/
+demo/out/events_*.json
+demo/out/summary.md

@@ -2,8 +2,11 @@
 #include"../include/execution_manager.hpp"
 #include "../include/sensor_swc.hpp"
 #include "../include/controller_swc.hpp"
+#include "../include/diagnostic_swc.hpp"
+#include "../include/ecu_config.hpp"
 #include "../include/message_queue.hpp"
 #include "../include/sensor_types.hpp"
+#include "../include/service_registry.hpp"
 #include "../include/lifecycle.hpp"
 #include <nlohmann/json.hpp>
 #include<fstream>
@@ -12,32 +15,48 @@
 
 using json=nlohmann::json;
 
-void runExecutionManager(){
+int runExecutionManager(const std::string& configPath){
     setupSignalHandlers();
 
-    std::ifstream configFile("config.json");
+    std::ifstream configFile(configPath);
     if(!configFile.is_open()){
-        std::cerr<<"Failed to open config.json"<<std::endl;
-        return;
+        std::cerr<<"Failed to open "<<configPath<<std::endl;
+        return 1;
     }
-    json config;
-    configFile>>config;
+    json root = json::parse(configFile, nullptr, false);
+    if (root.is_discarded()) {
+        std::cerr << "[Execution Manager] Config error: " << configPath << " is not valid JSON" << std::endl;
+        return 1;
+    }
+    ConfigParseResult parsed = parseEcuConfig(root);
+    for (const std::string& warning : parsed.warnings) {
+        std::cerr << "[Execution Manager] Config warning: " << warning << std::endl;
+    }
+    if (!parsed.ok()) {
+        for (const std::string& error : parsed.errors) {
+            std::cerr << "[Execution Manager] Config error: " << error << std::endl;
+        }
+        std::cerr << "[Execution Manager] Refusing to start with invalid " << configPath << std::endl;
+        return 1;
+    }
+    const EcuConfig& config = parsed.config;
 
-    float startTemp= config["sensor"]["startTemp"];
-    float tempStep= config["sensor"]["tempStep"];
-    float warningThreshold= config["controller"]["warningThreshold"];
-    float pressureThreshold= config["controller"].value("pressureWarningThreshold", 1e9f);
-    int sensorPeriod= config["sensor"]["periodMs"];
-    int controllerPeriod= config["controller"]["periodMs"];
-    
     MessageQueue<SensorData> messageQueue;
+    MessageQueue<DiagnosticEvent> diagnosticQueue;
 
-    std::thread sensorThread(sensorApp, std::ref(messageQueue), startTemp, tempStep, sensorPeriod);
-    std::thread controllerThread(controllerApp, warningThreshold, pressureThreshold, controllerPeriod);
+    // Start-up: diagnostics must be registered before the controller can raise events.
+    std::thread diagnosticThread(diagnosticApp, std::ref(diagnosticQueue), config.diagnostics);
+    ServiceRegistry::instance().discoverService("DiagnosticEventService");
+    std::thread sensorThread(sensorApp, std::ref(messageQueue), config.sensor);
+    std::thread controllerThread(controllerApp, config.controller);
 
+    // Shutdown: sensor -> controller -> diagnostics (dumps events last).
     sensorThread.join();
     messageQueue.close();
     controllerThread.join();
+    diagnosticQueue.close();
+    diagnosticThread.join();
 
-    std::cout<<"[Execution Manager] All apps have shut down." <<std::endl;   
+    std::cout<<"[Execution Manager] All apps have shut down." <<std::endl;
+    return 0;
 }

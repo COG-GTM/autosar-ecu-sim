@@ -7,7 +7,7 @@ import sys
 import time
 import urllib.request
 
-from plot_ecu import parse
+from plot_ecu import alarm_state, parse, thresholds
 
 
 def main():
@@ -42,11 +42,11 @@ def main():
             continue
         add("aptiv.ecu.temperature", [r["temp"] for r in rows])
         add("aptiv.ecu.pressure", [r["pres"] for r in rows])
-        add("aptiv.ecu.alarm.high_temp", [int(r["temp_alarm"]) for r in rows])
-        add("aptiv.ecu.alarm.high_pressure", [int(r["pres_alarm"]) for r in rows])
-        add("aptiv.ecu.threshold.temperature", [cfg["controller"]["warningThreshold"]] * n)
-        add("aptiv.ecu.threshold.pressure",
-            [cfg["controller"].get("pressureWarningThreshold", 0)] * n)
+        t_thr, p_thr = thresholds(cfg)
+        add("aptiv.ecu.alarm.high_temp", alarm_state(rows, "temp"))
+        add("aptiv.ecu.alarm.high_pressure", alarm_state(rows, "pres"))
+        add("aptiv.ecu.threshold.temperature", [t_thr] * n)
+        add("aptiv.ecu.threshold.pressure", [p_thr] * n)
 
     req = urllib.request.Request(
         f"https://api.{site}/api/v2/series",
