@@ -29,7 +29,8 @@ static const char* transitionFlag(const DiagnosticEvent& event) {
 }
 
 void controllerApp(ControllerConfig config) {
-    controllerState = AppState::RUNNING;
+    AppState expected = AppState::INIT;
+    controllerState.compare_exchange_strong(expected, AppState::RUNNING);
     auto queuePtr = static_cast<MessageQueue<SensorData>*>(ServiceRegistry::instance().discoverService("SensorDataService"));
     auto diagnosticsPtr = static_cast<MessageQueue<DiagnosticEvent>*>(ServiceRegistry::instance().discoverService("DiagnosticEventService"));
 

@@ -45,7 +45,10 @@ int runExecutionManager(const std::string& configPath){
     MessageQueue<DiagnosticEvent> diagnosticQueue;
 
     // Start-up: diagnostics must be registered before the controller can raise events.
-    std::thread diagnosticThread(diagnosticApp, std::ref(diagnosticQueue), config.diagnostics);
+    bool diagnosticsWritten = false;
+    std::thread diagnosticThread([&diagnosticQueue, &diagnosticsWritten, &config] {
+        diagnosticsWritten = diagnosticApp(diagnosticQueue, config.diagnostics);
+    });
     ServiceRegistry::instance().discoverService("DiagnosticEventService");
     std::thread sensorThread(sensorApp, std::ref(messageQueue), config.sensor);
     std::thread controllerThread(controllerApp, config.controller);
@@ -58,5 +61,5 @@ int runExecutionManager(const std::string& configPath){
     diagnosticThread.join();
 
     std::cout<<"[Execution Manager] All apps have shut down." <<std::endl;
-    return 0;
+    return diagnosticsWritten ? 0 : 1;
 }

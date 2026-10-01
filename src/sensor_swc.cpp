@@ -10,10 +10,10 @@
 
 extern std::atomic<AppState> sensorState;    
 
-SensorData sensorSample(const SensorConfig& config, int index) {
-    int phase = index;
+SensorData sensorSample(const SensorConfig& config, long long index) {
+    long long phase = index;
     if (config.rampSteps > 0) {
-        int period = 2 * config.rampSteps;
+        long long period = 2LL * config.rampSteps;
         phase = index % period;
         if (phase > config.rampSteps) {
             phase = period - phase;
@@ -21,15 +21,16 @@ SensorData sensorSample(const SensorConfig& config, int index) {
     }
     float noiseSign = (index % 2 == 0) ? 1.0f : -1.0f;
     SensorData data;
-    data.temperature = config.startTemp + phase * config.tempStep + noiseSign * config.tempNoise;
-    data.pressure = config.startPressure + phase * config.pressureStep + noiseSign * config.pressureNoise;
+    data.temperature = config.startTemp + static_cast<float>(phase) * config.tempStep + noiseSign * config.tempNoise;
+    data.pressure = config.startPressure + static_cast<float>(phase) * config.pressureStep + noiseSign * config.pressureNoise;
     return data;
 }
 
 void sensorApp(MessageQueue<SensorData>& queue, SensorConfig config) {
-    sensorState = AppState::RUNNING;
+    AppState expected = AppState::INIT;
+    sensorState.compare_exchange_strong(expected, AppState::RUNNING);
     ServiceRegistry::instance().registerService("SensorDataService", &queue);
-    int i = 0;
+    long long i = 0;
 
     while(sensorState != AppState::SHUTDOWN){
         SensorData data = sensorSample(config, i);

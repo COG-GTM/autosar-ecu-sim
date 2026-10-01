@@ -8,6 +8,7 @@ enum class AppState{
     SHUTDOWN
 };
 
+// SWCs only move INIT -> RUNNING, so a SHUTDOWN requested during start-up is never overwritten.
 extern std::atomic<AppState> sensorState;
 extern std::atomic<AppState> controllerState;
 extern std::atomic<AppState> diagnosticState;

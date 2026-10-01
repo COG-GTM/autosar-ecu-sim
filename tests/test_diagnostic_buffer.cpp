@@ -72,7 +72,8 @@ int main() {
         DiagnosticConfig config;
         config.capacity = 2;
         config.outputFile = path;
-        std::thread app(diagnosticApp, std::ref(queue), config);
+        bool written = false;
+        std::thread app([&] { written = diagnosticApp(queue, config); });
         auto* service = static_cast<MessageQueue<DiagnosticEvent>*>(
             ServiceRegistry::instance().discoverService("DiagnosticEventService"));
         CHECK(service == &queue, "diagnosticApp registers DiagnosticEventService");
@@ -87,6 +88,20 @@ int main() {
                   doc["events"][0]["value"] == 1.0,
               "events.json written at shutdown with retained events and overflow count");
         CHECK(diagnosticState == AppState::SHUTDOWN, "diagnosticApp reports SHUTDOWN");
+        CHECK(written, "diagnosticApp reports a successful dump");
+    }
+
+    // A failed dump is reported to the caller
+    {
+        MessageQueue<DiagnosticEvent> queue;
+        DiagnosticConfig config;
+        config.outputFile = "/proc/ecu-unwritable/events.json";
+        bool written = true;
+        std::thread app([&] { written = diagnosticApp(queue, config); });
+        ServiceRegistry::instance().discoverService("DiagnosticEventService");
+        queue.close();
+        app.join();
+        CHECK(!written, "diagnosticApp reports a failed dump");
     }
 
     std::printf("%s (%d failures)\n", failures ? "FAILED" : "PASSED", failures);

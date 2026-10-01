@@ -36,4 +36,5 @@ std::string toIso8601(std::chrono::system_clock::time_point ts);
 nlohmann::json diagnosticEventsToJson(const DiagnosticEventBuffer& buffer);
 bool writeDiagnosticEvents(const DiagnosticEventBuffer& buffer, const std::string& path);
 
-void diagnosticApp(MessageQueue<DiagnosticEvent>& queue, DiagnosticConfig config);
+// Returns false if the shutdown dump could not be written.
+bool diagnosticApp(MessageQueue<DiagnosticEvent>& queue, DiagnosticConfig config);

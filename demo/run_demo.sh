@@ -25,7 +25,13 @@ run_ecu() {  # run_ecu <name> <config>
   cat "$wd/config.json"
   echo
   # ECU reads ./config.json; SIGINT triggers the ExecutionManager's graceful shutdown.
-  (cd "$wd" && timeout -s INT "$DURATION" "$ROOT/build/ecu" | tee "$OUT/ecu_$name.log") || true
+  local rc
+  (cd "$wd" && timeout -s INT "$DURATION" "$ROOT/build/ecu" | tee "$OUT/ecu_$name.log"; exit "${PIPESTATUS[0]}") && rc=0 || rc=$?
+  # 124 = timeout delivered SIGINT and the ECU shut down gracefully.
+  if [[ $rc -ne 0 && $rc -ne 124 ]]; then
+    echo "ECU run '$name' failed (exit $rc)" >&2
+    exit "$rc"
+  fi
   # DiagnosticEventService dumps its ring buffer at shutdown.
   cp "$wd/diagnostics/events.json" "$OUT/events_$name.json"
   echo "diagnostics: $(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(len(d["events"]), "events,", d["dropped"], "dropped")' "$OUT/events_$name.json") -> demo/out/events_$name.json"

@@ -98,7 +98,7 @@ bool writeDiagnosticEvents(const DiagnosticEventBuffer& buffer, const std::strin
     return static_cast<bool>(out);
 }
 
-void diagnosticApp(MessageQueue<DiagnosticEvent>& queue, DiagnosticConfig config) {
+bool diagnosticApp(MessageQueue<DiagnosticEvent>& queue, DiagnosticConfig config) {
     diagnosticState = AppState::RUNNING;
     ServiceRegistry::instance().registerService("DiagnosticEventService", &queue);
     DiagnosticEventBuffer buffer(config.capacity);
@@ -110,7 +110,8 @@ void diagnosticApp(MessageQueue<DiagnosticEvent>& queue, DiagnosticConfig config
     diagnosticState = AppState::SHUTDOWN;
 
     std::ostringstream line;
-    if (writeDiagnosticEvents(buffer, config.outputFile)) {
+    bool written = writeDiagnosticEvents(buffer, config.outputFile);
+    if (written) {
         line << "[Diagnostics] Wrote " << buffer.size() << " events (" << buffer.dropped()
              << " dropped) to " << config.outputFile << "\n";
         std::cout << line.str() << std::flush;
@@ -119,4 +120,5 @@ void diagnosticApp(MessageQueue<DiagnosticEvent>& queue, DiagnosticConfig config
         std::cerr << line.str() << std::flush;
     }
     std::cout << "[Diagnostics] Shutting down." << std::endl;
+    return written;
 }
