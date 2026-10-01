@@ -41,4 +41,4 @@ test: build/test_message_queue build/test_shutdown
 
 .PHONY: clean
 clean:
-	rm -f build/ecu build/test_message_queue build/test_shutdown sensor_log.txt controller_log.txt
+	rm -f build/ecu build/stub_interfaces build/test_message_queue build/test_shutdown sensor_log.txt controller_log.txt
