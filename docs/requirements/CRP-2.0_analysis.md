@@ -92,7 +92,7 @@ Disposition values: **accepted**, **accepted-with-assumption**, **rejected/defer
 | Assumptions | A-12, A-16, A-17 |
 | Open questions | Q-13, Q-14 |
 | Feasibility | **Not met by `main`** (F-1, F-2). Feasible once the controller evaluates every sample on arrival — expected latency is then queue hand-off only (≪ 1 period). Requires a publish timestamp for measurement (F-4). |
-| Affected components | `controllerApp` loop, `SensorData` (timestamp), config validation (period rule), integration harness |
+| Affected components | `controllerApp` loop, `SensorData` (timestamp), queue-delay bound and any config-validation rule derived from it (AE-15, A-17), integration harness |
 | Disposition | **accepted-with-assumption** |
 
 ### Existing behaviour carried into B2.0
