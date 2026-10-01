@@ -329,10 +329,16 @@ argument (§1.4, §4): the controller loop has **no post-sample sleep** — it r
 therefore never grows faster than the sensor produces, each queued sample is evaluated on
 arrival, and worst-case detection latency for a physical crossing is `≤ sensor.periodMs +
 wake-up ≈ ≤ controller.periodMs`. This holds under one explicit assumption: per-sample
-processing time in the controller loop is `≪ sensor.periodMs` — true by construction (two
-float comparisons, an occasional queue send and a log write; no blocking I/O or sleeps in
-the loop). If that assumption ever broke the design degrades gracefully — every sample is
-still evaluated exactly once, just delayed by the backlog. Note the rule does not need the
+processing time in the controller loop is `≪ sensor.periodMs` — bounded by construction:
+two float comparisons, an occasional queue send, and one short line of logging per sample.
+**Logging is the dominant per-sample cost and is synchronous** (`std::cout` plus an
+`ofstream` append); these writes are kernel-buffered and ~100 bytes, so they are cheap in
+practice, but they are not guaranteed non-blocking — a stalled disk or a redirected console
+can park the loop. If logging ever becomes the bottleneck, queue growth would show up in
+`dropped`/latency before correctness is lost; the stated bound is a design intent, and the
+mitigation if it stops holding is a decoupled logger (e.g. an async sink on a dedicated
+thread), not a change to the alarm path. In all cases the design degrades gracefully — every
+sample is still evaluated exactly once, just delayed by the backlog. Note the rule does not need the
 inverse direction either: a faster producer is already handled, because the controller
 drains continuously rather than sampling once per period. **Not yet implemented on the
 AE-10 branch — rework item R-2 (§7.2).**
