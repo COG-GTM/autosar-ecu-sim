@@ -15,14 +15,8 @@ void controllerApp(float warningThreshold, int periodMs) {
     controllerState = AppState::RUNNING;
     auto queuePtr = static_cast<MessageQueue<SensorData>*>(ServiceRegistry::instance().discoverService("SensorDataService"));
     
-    float lastTemp =-1.0f;       
-    while(controllerState != AppState::SHUTDOWN){
-        std::optional<SensorData> received = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));
-        if (!received) {
-            continue;
-        }
-        SensorData data = *received;
-        
+    float lastTemp =-1.0f;
+    auto process = [&](const SensorData& data) {
         if (data.temperature != lastTemp) {
             std::ofstream logfile("controller_log.txt", std::ios::app);
             std::cout << "[Controller] Temp = " << data.temperature << ", Pressure = " << data.pressure;
@@ -42,6 +36,18 @@ void controllerApp(float warningThreshold, int periodMs) {
             }
         }
         lastTemp = data.temperature;
+    };
+
+    while(controllerState != AppState::SHUTDOWN){
+        std::optional<SensorData> received = queuePtr->receiveFor(std::chrono::milliseconds(periodMs));
+        if (!received) {
+            continue;
+        }
+        // Drain every sample queued since the last cycle: a sensor faster than the
+        // controller period must not build a backlog that delays warnings.
+        do {
+            process(*received);
+        } while ((received = queuePtr->receiveFor(std::chrono::milliseconds(0))));
         std::this_thread::sleep_for(std::chrono::milliseconds(periodMs));
     }
     std::cout<<"[Controller] Shutting down."<<std::endl;
