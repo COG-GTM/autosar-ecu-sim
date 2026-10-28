@@ -60,7 +60,7 @@ int main() {
     int published = countLines("sensor_log.txt", "Temp =");
     int warnings = countLines("controller_log.txt", "WARNING");
     int expected = published - 6;
-    bool warnOk = warnings >= expected - 30;
+    bool warnOk = expected > 30 && warnings >= expected - 30;  // too few samples is a failure, not a pass
     failures += !warnOk;
     std::printf("%s %d/%d over-threshold samples raised a warning\n", warnOk ? "ok:  " : "FAIL:", warnings, expected);
 
