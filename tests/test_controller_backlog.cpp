@@ -9,9 +9,11 @@
 #include <chrono>
 #include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <string>
 #include <thread>
+#include <unistd.h>
 
 using namespace std::chrono;
 
@@ -25,8 +27,13 @@ static int countLines(const char* path, const char* needle) {
 }
 
 int main() {
-    std::remove("sensor_log.txt");
-    std::remove("controller_log.txt");
+    // The SWCs append to ./sensor_log.txt and ./controller_log.txt: run in a scratch
+    // directory so real ECU logs are untouched and no stale lines are counted.
+    char dir[] = "/tmp/ecu_backlog_XXXXXX";
+    if (!mkdtemp(dir) || chdir(dir) != 0) {
+        std::perror("scratch dir");
+        return 1;
+    }
     MessageQueue<SensorData> queue;
     // Sensor every 10 ms, controller every 100 ms: ~10 samples arrive per controller cycle.
     std::thread sensorThread(sensorApp, std::ref(queue), 20.0f, 1.0f, 10);
@@ -56,6 +63,10 @@ int main() {
     bool warnOk = warnings >= expected - 30;
     failures += !warnOk;
     std::printf("%s %d/%d over-threshold samples raised a warning\n", warnOk ? "ok:  " : "FAIL:", warnings, expected);
+
+    std::remove("sensor_log.txt");
+    std::remove("controller_log.txt");
+    rmdir(dir);
 
     std::printf("%s (%d failures)\n", failures ? "FAILED" : "PASSED", failures);
     return failures ? 1 : 0;
