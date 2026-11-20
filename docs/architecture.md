@@ -33,9 +33,9 @@ The diagram source is [`diagrams/architecture.dot`](diagrams/architecture.dot) (
 
 ## Configuration
 
-`config.json` (repository root):
+`config.json` (repository root). Every key is required: the Execution Manager reads them with no fallback, so a missing or mistyped key throws an uncaught `nlohmann::json` exception. The values below are the shipped settings.
 
-| Key | Default | Used by |
+| Key | Shipped value | Meaning |
 |---|---|---|
 | `sensor.startTemp` | `20.0` | Temperature of the first sample. |
 | `sensor.tempStep` | `1.0` | Temperature increase per sample. |
