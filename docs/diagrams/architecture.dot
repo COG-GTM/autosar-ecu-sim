@@ -1,0 +1,62 @@
+// Architecture of the autosar-ecu-sim ECU process (build/ecu).
+// Edit this file, then run docs/diagrams/render.sh to refresh the PNG and SVG.
+digraph ecu {
+  graph [rankdir=TB, fontname="DejaVu Sans", fontsize=18, labelloc=t, nodesep=0.5, ranksep=0.6, pad=0.3,
+         label="autosar-ecu-sim: one ECU process, two SWC threads, one message queue"];
+  node  [fontname="DejaVu Sans", fontsize=16, shape=box, style="rounded,filled", fillcolor=white, color="#455a64"];
+  edge  [fontname="DejaVu Sans", fontsize=13, color="#455a64"];
+
+  os     [label="OS signals\nSIGINT / SIGTERM", shape=oval, fillcolor="#ffebee", color="#c62828"];
+  config [label="config.json\n(read from the working directory)", shape=note, fillcolor="#fff8e1"];
+
+  subgraph cluster_proc {
+    label="build/ecu process (src/main.cpp)"; style="rounded"; color="#1565c0"; fontcolor="#1565c0";
+
+    em [label="Execution Manager\nrunExecutionManager()\nsrc/execution_manager.cpp\n1. setupSignalHandlers()\n2. parse config.json\n3. start sensor + controller threads\n4. join sensor, close queue, join controller", fillcolor="#e3f2fd"];
+
+    lc [label="Lifecycle\nsrc/lifecycle.cpp\nhandleSignal()\natomic sensorState / controllerState\nINIT -> RUNNING -> SHUTDOWN", fillcolor="#ffebee"];
+
+    subgraph cluster_swc {
+      label="Software components (std::thread each)"; style="rounded,dashed"; color="#2e7d32"; fontcolor="#2e7d32";
+      {rank=same; sensor; controller;}
+      sensor [label="Sensor SWC\nsensorApp()\nsrc/sensor_swc.cpp\nTemp = startTemp + i*tempStep\nPressure = 1.0 + i*0.1\nevery sensor.periodMs", fillcolor="#e8f5e9"];
+      controller [label="Controller SWC\ncontrollerApp()\nsrc/controller_swc.cpp\nreceiveFor(controller.periodMs)\nwarn if Temp > warningThreshold", fillcolor="#e8f5e9"];
+    }
+
+    {rank=same; registry; queue;}
+    registry [label="ServiceRegistry (singleton)\nsrc/service_registry.cpp\nname -> void*\ndiscoverService() blocks until registered", fillcolor="#f3e5f5"];
+    queue [label="MessageQueue<SensorData>\ninclude/message_queue.hpp\nmutex + condition_variable FIFO\nsend / receiveFor / close", fillcolor="#f3e5f5"];
+  }
+
+  {rank=same; os; config;}
+  {rank=same; stdout; slog; clog;}
+  stdout [label="stdout\n[Sensor] / [Controller] lines", shape=oval, fillcolor="#eceff1"];
+  slog   [label="sensor_log.txt", shape=note, fillcolor="#fff8e1"];
+  clog   [label="controller_log.txt\n(+ [WARNING: High Temp!])", shape=note, fillcolor="#fff8e1"];
+
+  os -> lc [label="handleSignal()"];
+  config -> em [label="sensor.*, controller.*"];
+  em -> lc [label="installs handlers"];
+  em -> queue [label="owns (stack)"];
+  em -> sensor [label="std::thread"];
+  em -> controller [label="std::thread"];
+  lc -> sensor [label="sensorState", style=dashed, color="#c62828", fontcolor="#c62828"];
+  lc -> controller [label="controllerState", style=dashed, color="#c62828", fontcolor="#c62828"];
+  sensor -> registry [label="register\n\"SensorDataService\""];
+  controller -> registry [label="discover\n\"SensorDataService\""];
+  sensor -> queue [label="send(SensorData)"];
+  queue -> controller [label="receiveFor()"];
+  sensor -> stdout;
+  sensor -> slog [label="append"];
+  controller -> stdout;
+  controller -> clog [label="append"];
+
+  slog -> tmq [style=invis];
+  subgraph cluster_tests {
+    label="Host tests (make test)"; style="rounded,dashed"; color="#6d4c41"; fontcolor="#6d4c41";
+    tmq [label="tests/test_message_queue.cpp\nFIFO, timeout, close()", fillcolor="#efebe9"];
+    tsd [label="tests/test_shutdown.cpp\nSHUTDOWN joins both SWCs", fillcolor="#efebe9"];
+  }
+  queue -> tmq [style=dotted, dir=back, label="exercises"];
+  controller -> tsd [style=dotted, dir=back, label="drives sensor +\ncontroller + handleSignal()"];
+}
