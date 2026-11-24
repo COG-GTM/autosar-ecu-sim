@@ -32,6 +32,28 @@ autosar_ecu_sim/ ├── include/ │ ├── shared_memory.hpp │ ├─�
 
 ## 🛠 Build & Run
 
+### Prerequisites
+
+- A C++17 compiler (`g++`) and GNU `make`. On Debian/Ubuntu: `sudo apt-get install -y build-essential`. On macOS: `xcode-select --install`.
+- No other dependencies: `nlohmann/json` is vendored under `include/nlohmann/`.
+
+### Build and run
+
+Run these from the repository root:
+
 ```bash
 make clean && make
 ./build/ecu
+```
+
+The ECU reads `config.json` from the current directory, so start it from the repository root (from anywhere else it prints `Failed to open config.json` and exits). It runs until you stop it with `Ctrl+C` (or `SIGTERM`), then prints `[Execution Manager] All apps have shut down.`
+
+While running, the sensor and controller print their readings to the terminal and append them to `sensor_log.txt` and `controller_log.txt` in the current directory. The controller adds `[WARNING: High Temp!]` once the temperature passes `controller.warningThreshold` in `config.json`. `make clean` deletes both log files.
+
+### Tests
+
+```bash
+make test
+```
+
+This builds and runs the host tests in `tests/` (message queue and shutdown); each prints `PASSED (0 failures)`.
