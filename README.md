@@ -46,7 +46,7 @@ make clean && make
 ./build/ecu
 ```
 
-The ECU reads `config.json` from the current directory, so start it from the repository root (from anywhere else it prints `Failed to open config.json` and exits). It runs until you stop it with `Ctrl+C` (or `SIGTERM`), then prints `[Execution Manager] All apps have shut down.`
+The ECU reads `config.json` from the current directory, so start it from the repository root to use the repo's config (a directory with no `config.json` makes it print `Failed to open config.json` and exit; one with its own `config.json` runs with that file instead). It runs until you stop it with `Ctrl+C` (or `SIGTERM`), then prints `[Execution Manager] All apps have shut down.`
 
 While running, the sensor and controller print their readings to the terminal and append them to `sensor_log.txt` and `controller_log.txt` in the current directory. The controller adds `[WARNING: High Temp!]` once the temperature passes `controller.warningThreshold` in `config.json`. `make clean` deletes both log files.
 
@@ -56,4 +56,4 @@ While running, the sensor and controller print their readings to the terminal an
 make test
 ```
 
-This builds and runs the host tests in `tests/` (message queue and shutdown); each prints `PASSED (0 failures)`.
+This builds and runs the host tests in `tests/` (message queue and shutdown); each prints `PASSED (0 failures)`. The shutdown test runs the real sensor and controller, so it also appends readings to `sensor_log.txt` and `controller_log.txt`; run `make clean` first if you want logs from a clean ECU run.
